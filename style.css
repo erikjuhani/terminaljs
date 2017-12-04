@@ -1,0 +1,83 @@
+@import url('https://fonts.googleapis.com/css?family=Roboto');
+
+@font-face {
+  font-family: Menlo;
+  src: url(Menlo-Regular.ttf);
+}
+
+.wrapper {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: 90px 1fr 1fr;
+}
+
+html {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: -webkit-gradient(linear, left top, left bottom, from(#f4cbdb), to(#e98c97));  
+}
+
+header {
+  height: 20px;
+  grid-column-start: 1;
+  grid-column-end: 3;
+  padding-bottom: 100px;
+}
+
+p {
+  font-size: 28px;
+  color: #000;
+  margin-left: 50px;
+}
+
+footer {
+  background-color: #1d0a06;
+  color: #fff;
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: 12px;
+  text-align: center;
+  font-size: 18px;
+}
+
+#terminal {
+  display: flex;
+  padding: 10px 0 10px 0;
+  justify-content: flex-start;
+  flex-direction: column;
+  background-color: #4e4e4e;
+  border-radius: 7px;
+  height: 400px;
+  width: 600px;
+}
+
+#terminal p {
+  font-size: 12px;
+  text-rendering: geometricPrecision;
+  font-family: Menlo, sans-serif;  
+  color: #7dcbd7;
+  margin: 0 10px 0;
+}
+
+.caret {
+  background: none;
+  color: #7dcbd7;
+  animation: caretBlink 1s step-start 0s infinite;
+}
+
+.command {
+  color: #fff;
+}
+
+@keyframes caretBlink {
+  50% { background: #ed8e96; color: #ed8e96; };
+}
+
+#promt {
+  word-wrap: break-word;
+}

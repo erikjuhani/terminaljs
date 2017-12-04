@@ -1,0 +1,295 @@
+/**
+ * Refactor code
+ * Rethink Renderable
+ */
+class Renderable {
+  constructor() {}
+
+  render() {
+    this.data.forEach((line, i) => {
+      const newline = document.createElement('p');
+
+      this.prefix.forEach(char => {
+        this.renderChar(newline, char);
+      });
+
+      line.forEach((char, j) => {
+        this.renderChar(newline, char);
+      });
+
+      this.terminal.window.appendChild(newline);      
+    });
+  }
+
+  renderChar(line, char) {
+    const newchar = document.createElement('span');
+    newchar.appendChild(document.createTextNode(char));
+    line.appendChild(newchar);
+  }
+}
+
+/**
+ * Animator class 
+ * TODO
+ */
+class Animator extends Renderable {
+  constructor(delay, prefix, data) {
+    this.data = data;
+  }
+}
+
+/**
+ * Caret class
+ */
+class Caret { 
+  constructor(promt) {
+    this.promt = promt;
+    this.input = this.promt.inputField;
+    this.getChar = this.getChar.bind(this);
+  }
+
+  setPos(pos) {
+    if (pos >= 0 && pos < this.input.length) {
+      this.pos = pos;
+    } 
+  }
+
+  move(dir) {
+    const newPos = this.pos + dir;
+    if (newPos >= 0 && newPos < this.input.length) {
+      this.pos += dir;
+      this.promt.render();
+    }
+  }
+}
+
+const dummyData =  ['H', 'e', 'l', 'l', 'o', '\u00A0', 'S', 't', 'r', 'a', 'n', 'g', 'e', 'r'];
+
+/**
+ * Storage extends Renderable.
+ * Keeps all the awesome stuff stored.
+ */
+class Storage extends Renderable {
+  constructor(prefix, terminal) {
+    super();
+    this.data = [dummyData];
+    this.prefix = prefix;
+    this.terminal = terminal;
+  }
+}
+
+/**
+ * Promt class extends Renderable.
+ * Does all the heavy lifting :).
+ */
+class Promt extends Renderable {
+  constructor(terminal) {
+    super();
+    this.prefix = ['\u25B2', '\u00A0', '~', '\u00A0'];
+    this.inputField = [this.createElement('\u00A0')];
+    this.terminal = terminal;
+    this.caret = new Caret(this);
+    this.commands = {
+      // command key : callback
+      cd: () => { console.log('change directory'); },
+      curl: () => { console.log('curl') },
+      clear: () => { console.log('clear') },
+      git: () => { console.log('git') },
+    }
+    this.currentCommand = null;
+  }
+
+  render() {
+    if (document.getElementById('promt')) {
+      const promt = document.getElementById('promt');
+      promt.parentNode.removeChild(promt);
+    }    
+    const promtLine = document.createElement('p');
+    promtLine.id = 'promt';
+      this.prefix.forEach(char => {
+        this.renderChar(promtLine, char);
+      });
+
+      this.inputField.forEach((element, i) => {
+        promtLine.appendChild(element);
+
+        if (element.classList.contains('caret')) {
+          element.classList.remove('caret');
+        }
+
+        if (element.classList.contains('command')) {
+          element.classList.remove('command');
+        }
+        
+        if (this.currentCommand && i < this.currentCommand.length) {
+          console.log(i);
+          element.classList.add('command');
+        }
+
+        if (this.caret.pos === undefined || this.caret.pos === null) {
+          this.caret.setPos(this.inputField.length - 1);
+        }
+      });
+
+      this.inputField[this.caret.pos].classList.add('caret');
+      this.terminal.window.appendChild(promtLine);
+  }
+
+  createElement(char) {
+    const element = document.createElement('span');
+    const textNode = document.createTextNode(char);
+    element.appendChild(textNode);
+    return element;
+  }
+
+  addStorage() {
+    const promt = document.getElementById('promt');
+    promt.parentNode.removeChild(promt);
+
+    this.terminal.storage.data.push(this.parseInputField());    
+    this.inputField = [this.createElement('\u00A0')]; // init with space
+    this.caret.input = this.inputField;
+    this.caret.pos = null;
+
+    this.terminal.render();
+  }
+
+  parseInputField() {
+    return this.inputField.map(element => {
+      return element.innerHTML.replace(/&nbsp;/g, '\u00A0');
+    }).slice(0, -1);
+  }
+
+  move(dir) {
+    this.caret.move(dir);
+  }
+
+  write(char) {
+    this.inputField.splice(this.caret.pos, 0, this.createElement(char));
+    this.caret.move(1);
+    this.checkCommand();
+    this.render();
+  }
+
+  remove() {
+    const removePos = this.caret.pos - 1;
+    if (removePos >= 0) {
+      this.inputField.splice(removePos, 1);
+      this.caret.pos = removePos;
+      this.checkCommand();      
+      this.render();
+    }
+  }
+
+  parseCharArray(elementArray) {
+    const charArray = elementArray.map(element => {
+      return element.innerHTML;
+    });
+    return charArray.join('');
+  }
+
+  checkCommand() {
+    // Check for first word / command
+    const commandString = this.parseCharArray(this.inputField);
+    const commandCharArray = commandString.match(/^([a-z]+)(?=.*&)/g);
+    const command = commandCharArray ? commandCharArray[0] : '';
+  
+    if (this.commands[command]) {
+      this.currentCommand = command;
+    } else {
+      this.currentCommand = null;
+    }
+  }
+}
+
+class Terminal {
+  constructor() {
+    this.window = document.getElementById('terminal');
+    this.promt = new Promt(this);
+    this.storage = new Storage(this.promt.prefix, this);
+  }
+
+  render() {
+    this.clear();
+    this.storage.render();
+    this.promt.render();
+  }
+
+  parseString(string) {
+    // TODO
+    // For mouse right click clipboard copy.
+  }
+
+  clear() {
+    this.window.innerHTML = null;
+  }
+}
+
+const terminal = new Terminal();
+terminal.render();
+
+// MOVE THIS TO A SEPARATE FILE ASAP
+const RELEASED = 0;
+const PRESSED = 1;
+
+class Keyboard {
+  constructor() {
+    this.keyStates = new Map();
+  }
+
+  handleEvent(event) {
+    const {code} = event;
+    const keyState = event.type === 'keydown' ? PRESSED : RELEASED;
+    event.preventDefault();
+    if (keyState === 1) {
+      switch (event.key) {
+        case "ArrowDown":
+          // TODO
+          break;
+        case "ArrowUp":
+          // TODO
+          break;
+        case "ArrowLeft":
+          terminal.promt.move(-1);
+          break;
+        case "ArrowRight":
+          terminal.promt.move(1);
+          break;
+        case "Enter":
+          terminal.promt.addStorage();
+          break;
+        case 'Shift':
+          //TODO
+          break;
+        case ' ':
+          terminal.promt.write('\u00A0');
+          break;
+        case "Backspace":
+          terminal.promt.remove();
+          break;
+        default:
+          terminal.promt.write(event.key);
+          return;
+      }
+    }
+  
+    if (this.keyStates.get(code) === keyState) {
+      return;
+    }
+
+    this.keyStates.set(code, keyState);
+  }
+
+  listenTo(window) {
+     ['keydown', 'keyup'].forEach(eventName => {
+      window.addEventListener(eventName, event => {
+        this.handleEvent(event);
+      });
+     })
+  }
+}
+
+const keyboard = new Keyboard();
+keyboard.listenTo(window);
+
+window.terminalWindow = terminal;
