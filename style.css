@@ -74,6 +74,10 @@ footer {
   color: #fff;
 }
 
+.command-back {
+  background: #000;
+}
+
 @keyframes caretBlink {
   50% { background: #ed8e96; color: #ed8e96; };
 }

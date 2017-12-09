@@ -3,18 +3,27 @@
  * Rethink Renderable
  */
 class Renderable {
-  constructor() {}
+  constructor() {
+    this.drawLine = 0;
+  }
 
   render() {
-    this.data.forEach((line, i) => {
+    let drawVar = 0;
+    if (this.data.length > 27) {
+      drawVar = this.data.length - 27; // max lines
+    }
+    console.log(this.drawLine);
+    this.data.slice(this.drawLine).forEach((line, i) => {
+      console.log(i, line);
+      if (i < drawVar) return;
       const newline = document.createElement('p');
 
       this.prefix.forEach(char => {
         this.renderChar(newline, char);
       });
 
-      line.forEach((char, j) => {
-        this.renderChar(newline, char);
+      line.forEach((element, j) => {
+        newline.appendChild(element);
       });
 
       this.terminal.window.appendChild(newline);      
@@ -31,6 +40,8 @@ class Renderable {
 /**
  * Animator class 
  * TODO
+ * takes in a json file
+ * 
  */
 class Animator extends Renderable {
   constructor(delay, prefix, data) {
@@ -45,7 +56,6 @@ class Caret {
   constructor(promt) {
     this.promt = promt;
     this.input = this.promt.inputField;
-    this.getChar = this.getChar.bind(this);
   }
 
   setPos(pos) {
@@ -72,9 +82,18 @@ const dummyData =  ['H', 'e', 'l', 'l', 'o', '\u00A0', 'S', 't', 'r', 'a', 'n', 
 class Storage extends Renderable {
   constructor(prefix, terminal) {
     super();
-    this.data = [dummyData];
+    this.data = [this.parseCharArray(dummyData)];
     this.prefix = prefix;
     this.terminal = terminal;
+  }
+
+  parseCharArray(charArray) {
+    return charArray.map(char => {
+      const element = document.createElement('span');
+      const textNode = document.createTextNode(char);
+      element.appendChild(textNode);
+      return element;
+    });
   }
 }
 
@@ -93,8 +112,14 @@ class Promt extends Renderable {
       // command key : callback
       cd: () => { console.log('change directory'); },
       curl: () => { console.log('curl') },
-      clear: () => { console.log('clear') },
-      git: () => { console.log('git') },
+      clear: () => {
+        // Needs a proper way of handling this
+        this.moveDrawLine(this.terminal.storage.data.length + 1);
+        this.currentCommand = null;
+       },
+      git: (options) => { 
+        console.log('git')
+      },
     }
     this.currentCommand = null;
   }
@@ -122,7 +147,6 @@ class Promt extends Renderable {
         }
         
         if (this.currentCommand && i < this.currentCommand.length) {
-          console.log(i);
           element.classList.add('command');
         }
 
@@ -146,7 +170,7 @@ class Promt extends Renderable {
     const promt = document.getElementById('promt');
     promt.parentNode.removeChild(promt);
 
-    this.terminal.storage.data.push(this.parseInputField());    
+    this.terminal.storage.data.push(this.parseInputField());
     this.inputField = [this.createElement('\u00A0')]; // init with space
     this.caret.input = this.inputField;
     this.caret.pos = null;
@@ -154,10 +178,12 @@ class Promt extends Renderable {
     this.terminal.render();
   }
 
+  moveDrawLine(pos) {
+    this.terminal.storage.drawLine = pos;
+  }
+
   parseInputField() {
-    return this.inputField.map(element => {
-      return element.innerHTML.replace(/&nbsp;/g, '\u00A0');
-    }).slice(0, -1);
+    return this.inputField.slice(0, -1);
   }
 
   move(dir) {
@@ -165,7 +191,11 @@ class Promt extends Renderable {
   }
 
   write(char) {
-    this.inputField.splice(this.caret.pos, 0, this.createElement(char));
+    if (typeof char === 'string') {
+      this.inputField.splice(this.caret.pos, 0, this.createElement(char));      
+    } else {
+      this.inputField.splice(this.caret.pos, 0, char);
+    }
     this.caret.move(1);
     this.checkCommand();
     this.render();
@@ -176,7 +206,7 @@ class Promt extends Renderable {
     if (removePos >= 0) {
       this.inputField.splice(removePos, 1);
       this.caret.pos = removePos;
-      this.checkCommand();      
+      this.checkCommand();
       this.render();
     }
   }
@@ -186,6 +216,18 @@ class Promt extends Renderable {
       return element.innerHTML;
     });
     return charArray.join('');
+  }
+
+  execute() {
+    if (this.currentCommand) {
+      this.commands[this.currentCommand]();
+    }
+    this.addStorage();
+  }
+
+  parseCommandOptions(options) {
+    let parsedOptions = options.match(/\w+[\w+.]/g);
+    console.log(parsedOptions);
   }
 
   checkCommand() {
@@ -198,6 +240,17 @@ class Promt extends Renderable {
       this.currentCommand = command;
     } else {
       this.currentCommand = null;
+    }
+  }
+
+  cancelCommand() {
+    if (this.inputField.length > 1) {
+      ['^', 'C'].forEach(char => {
+        const element = this.createElement(char);
+        element.classList.add('command-back');
+        this.write(element);        
+      });
+      this.addStorage();
     }
   }
 }
@@ -231,6 +284,7 @@ terminal.render();
 // MOVE THIS TO A SEPARATE FILE ASAP
 const RELEASED = 0;
 const PRESSED = 1;
+let controlKey = null;
 
 class Keyboard {
   constructor() {
@@ -256,7 +310,11 @@ class Keyboard {
           terminal.promt.move(1);
           break;
         case "Enter":
-          terminal.promt.addStorage();
+          terminal.promt.execute();
+          //terminal.promt.addStorage();
+          break;
+        case 'Control':
+          controlKey = 'control';
           break;
         case 'Shift':
           //TODO
@@ -268,8 +326,16 @@ class Keyboard {
           terminal.promt.remove();
           break;
         default:
-          terminal.promt.write(event.key);
+          if (controlKey === 'control' && event.key === 'c') {
+            terminal.promt.cancelCommand();
+          } else {
+            terminal.promt.write(event.key);
+          }
           return;
+      }
+    } else {
+      if (event.key === 'Control') {
+        controlKey = null;        
       }
     }
   
