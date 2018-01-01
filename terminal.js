@@ -12,9 +12,7 @@ class Renderable {
     if (this.data.length > 27) {
       drawVar = this.data.length - 27; // max lines
     }
-    console.log(this.drawLine);
     this.data.slice(this.drawLine).forEach((line, i) => {
-      console.log(i, line);
       if (i < drawVar) return;
       const newline = document.createElement('p');
 
@@ -44,8 +42,27 @@ class Renderable {
  * 
  */
 class Animator extends Renderable {
-  constructor(delay, prefix, data) {
-    this.data = data;
+  constructor(promt) {
+    this.promt = promt;
+  }
+
+  loadJSON(url) {
+    return fetch(url)
+      .then(res => res.json());
+  }
+
+  loadAnimation(url) {
+    this.loadJSON(url)
+      .then(animSpec => {
+        this.runAnimation(animSpec);
+      });
+  }
+
+  runAnimation(animSpec) {
+    console.log(animSpec);
+    animSpec.forEach(line => {
+      
+    });
   }
 }
 

@@ -1,0 +1,16 @@
+{
+  "lines": [
+    {
+      "type"  : "text", // needs type
+      "class" : "", // not compulsory
+      "duration" : 0, // defaults to 0
+      "print" : "Hello Stranger!" // can be empty
+    },
+    {
+      "type" : "command",
+      "class" : "", // not compulsory
+      "duration": 3000, // milliseconds
+      "print": "execute" // command name
+    }
+  ]
+}
